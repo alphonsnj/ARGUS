@@ -1,0 +1,37 @@
+name: Continuous integration
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Web quality
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build --workspace=@argus/web
+      - run: npm run typecheck
+
+  api:
+    name: API quality
+    runs-on: ubuntu-24.04
+    defaults: { run: { working-directory: apps/api } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python -m pip install --upgrade pip
+      - run: pip install . --group dev
+      - run: cp ../../.env.example .env
+      - run: ruff check src tests
+      - run: mypy src
+      - run: pytest

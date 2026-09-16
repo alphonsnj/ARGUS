@@ -1,0 +1,1 @@
+"""ARGUS API application package."""

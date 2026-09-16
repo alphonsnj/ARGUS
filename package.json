@@ -1,0 +1,30 @@
+{
+  "name": "argus",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "npm@11.17.0",
+  "workspaces": [
+    "apps/web",
+    "packages/*"
+  ],
+  "overrides": {
+    "next": {
+      "postcss": "8.5.23",
+      "sharp": "0.35.4"
+    }
+  },
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "dev": "npm run dev --workspace=@argus/web",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20.18.0",
+    "npm": ">=10.8.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
+}

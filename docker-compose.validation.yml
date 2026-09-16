@@ -1,0 +1,8 @@
+# Isolated, disposable validation stack. Use with -p argus-validation and the base compose file.
+services:
+  api:
+    ports: !override ["127.0.0.1:8300:8000"]
+  minio:
+    ports: !override ["127.0.0.1:9301:9001"]
+  web:
+    ports: !override ["127.0.0.1:3300:3000"]
