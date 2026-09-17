@@ -27,7 +27,7 @@ async function sha(file) {
   return hash.digest("hex");
 }
 function objects(operation, writable = false) {
-  docker(["run", "--rm", "--user", "0", "--network", `${project}_default`,
+  docker(["run", "--rm", "--user", `${process.getuid()}:${process.getgid()}`, "--network", `${project}_default`,
     "--env-file", path.resolve(".env"),
     "--mount", `type=bind,source=${path.resolve("scripts")},target=/ops,readonly`,
     "--mount", `type=bind,source=${root},target=/backup${writable ? "" : ",readonly"}`,
