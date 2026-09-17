@@ -129,6 +129,12 @@ async def create_document(
                 digest.update(chunk)
                 destination.write(chunk)
         validate_file_signature(path, content_type)
+        if not DocumentRepository(session).reserve_capacity(
+            user.id, size, settings.max_user_storage_bytes, settings.max_user_documents
+        ):
+            raise HTTPException(
+                status_code=413, detail="Workspace storage or document quota exceeded"
+            )
         quarantine_key = f"quarantine/{uuid4()}/{filename}"
         ObjectStorage(settings).upload_file(path, quarantine_key, content_type)
     document = DocumentRepository(session).create(

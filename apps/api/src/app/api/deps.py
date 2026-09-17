@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
@@ -33,12 +34,15 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication is required"
         )
     try:
-        user_id = decode_access_token(credentials.credentials, settings)
+        user_id, session_id = decode_access_token(credentials.credentials, settings)
     except InvalidTokenError as error:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token"
         ) from error
-    user = UserRepository(session).get_by_id(user_id)
+    users = UserRepository(session)
+    if not users.active_session(session_id, user_id, datetime.now(timezone.utc)):
+        raise HTTPException(status_code=401, detail="Session is no longer active")
+    user = users.get_by_id(user_id)
     if user is None or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Account is not active"

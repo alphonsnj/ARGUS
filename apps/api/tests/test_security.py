@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 import jwt
+import pytest
 
 from app.core.config import Settings
 from app.core.security import (
@@ -32,7 +33,7 @@ def test_password_round_trip() -> None:
 
 def test_access_token_has_bound_claims() -> None:
     config = settings()
-    token = create_access_token(uuid4(), config)
+    token = create_access_token(uuid4(), config, uuid4())
     claims = jwt.decode(
         token,
         config.jwt_secret_key.get_secret_value(),
@@ -41,12 +42,25 @@ def test_access_token_has_bound_claims() -> None:
         issuer=config.jwt_issuer,
     )
     assert claims["sub"]
+    assert claims["sid"]
+
+
+def test_legacy_access_tokens_without_session_are_rejected() -> None:
+    config = settings()
+    legacy = jwt.encode({"sub": str(uuid4()), "iss": config.jwt_issuer,
+                         "aud": config.jwt_audience},
+                        config.jwt_secret_key.get_secret_value(), algorithm="HS256")
+    with pytest.raises(jwt.InvalidTokenError):
+        decode_access_token(legacy, config)
 
 
 def test_access_token_can_be_decoded_to_its_subject() -> None:
     config = settings()
     subject = uuid4()
-    assert decode_access_token(create_access_token(subject, config), config) == subject
+    session_id = uuid4()
+    assert decode_access_token(create_access_token(subject, config, session_id), config) == (
+        subject, session_id
+    )
 
 
 def test_refresh_tokens_are_random_and_only_their_digest_is_storable() -> None:

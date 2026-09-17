@@ -32,6 +32,7 @@ jobs:
       - run: npm run lint
       - run: npm run build --workspace=@argus/web
       - run: npm run typecheck
+      - run: node scripts/qa-auth-client.mjs
 
   api:
     name: API quality

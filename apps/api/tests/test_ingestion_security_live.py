@@ -54,6 +54,7 @@ def test_malware_isolation_and_logout() -> None:
         assert stranger.get("/documents").json() == []
         assert stranger.get("/documents", params={"query": "quasar"}).json() == []
         assert stranger.get("/users").status_code == 403
+        assert stranger.delete(f"/users/{user_ids[0]}/sessions").status_code == 403
         assert httpx.get("http://api:8000/api/v1/documents").status_code == 401
         spoofed = owner.post("/documents", files={
             "file": ("fake.pdf", b"not pdf", "application/pdf")
@@ -81,8 +82,24 @@ def test_malware_isolation_and_logout() -> None:
             assert stored.storage_key is None
             assert stored.extracted_text is None
         assert owner.post(f"/documents/{infected_id}/retry").status_code == 409
+        old_access = owner.headers["Authorization"]
+        refreshed = owner.post("/auth/refresh")
+        assert refreshed.status_code == 200
+        assert owner.get("/users/me").status_code == 401
+        owner.headers["Authorization"] = f"Bearer {refreshed.json()['access_token']}"
+        assert owner.get("/users/me").status_code == 200
+        assert old_access != owner.headers["Authorization"]
         assert owner.post("/auth/logout").status_code == 204
+        assert owner.get("/users/me").status_code == 401
         assert owner.post("/auth/refresh").status_code == 401
+        with httpx.Client(base_url="http://api:8000/api/v1", timeout=30) as other_session:
+            login = other_session.post("/auth/token", json={"email": email, "password": password})
+            assert login.status_code == 200
+            other_session.headers["Authorization"] = f"Bearer {login.json()['access_token']}"
+            assert stranger.post("/auth/logout-all").status_code == 204
+            assert stranger.get("/users/me").status_code == 401
+            assert other_session.get("/users/me").status_code == 401
+            assert other_session.post("/auth/refresh").status_code == 401
     finally:
         for client in clients:
             client.close()

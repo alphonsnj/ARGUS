@@ -26,27 +26,30 @@ class AuthService:
             raise InvalidCredentialsError
         return user
 
-    def issue_access_token(self, user: User) -> str:
-        return create_access_token(user.id, self._settings)
-
     def issue_token_pair(self, user: User) -> tuple[str, str]:
         refresh_token = create_refresh_token()
-        self._users.create_refresh_token(
+        session = self._users.create_refresh_token(
             user,
             hash_token(refresh_token),
             datetime.now(timezone.utc) + timedelta(days=self._settings.refresh_token_expire_days),
         )
-        return self.issue_access_token(user), refresh_token
+        return create_access_token(user.id, self._settings, session.id), refresh_token
 
     def rotate_refresh_token(self, raw_token: str) -> tuple[str, str]:
         now = datetime.now(timezone.utc)
+        token = self._users.get_active_refresh_token(hash_token(raw_token), now, lock=False)
+        if token is None:
+            raise InvalidCredentialsError
+        # All-session revocation and rotation share the user lock, then recheck the token.
+        self._users.lock_user(token.user_id)
         token = self._users.get_active_refresh_token(hash_token(raw_token), now)
         if token is None:
             raise InvalidCredentialsError
         user = self._users.get_by_id(token.user_id)
         if user is None or not user.is_active:
             raise InvalidCredentialsError
-        self._users.revoke_refresh_token(token, now)
+        # The locked old token and replacement commit together, preventing double rotation.
+        self._users.revoke_refresh_token(token, now, commit=False)
         return self.issue_token_pair(user)
 
     def revoke_refresh_token(self, raw_token: str) -> None:

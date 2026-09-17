@@ -23,11 +23,12 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
 
 
-def create_access_token(subject: UUID, settings: Settings) -> str:
+def create_access_token(subject: UUID, settings: Settings, session_id: UUID) -> str:
     now = datetime.now(timezone.utc)
     return jwt.encode(
         {
             "sub": str(subject),
+            "sid": str(session_id),
             "iss": settings.jwt_issuer,
             "aud": settings.jwt_audience,
             "iat": now,
@@ -47,15 +48,16 @@ def hash_token(token: str) -> str:
     return sha256(token.encode("utf-8")).hexdigest()
 
 
-def decode_access_token(token: str, settings: Settings) -> UUID:
+def decode_access_token(token: str, settings: Settings) -> tuple[UUID, UUID]:
     claims = jwt.decode(
         token,
         settings.jwt_secret_key.get_secret_value(),
         algorithms=["HS256"],
         audience=settings.jwt_audience,
         issuer=settings.jwt_issuer,
+        options={"require": ["sub", "sid", "iat", "nbf", "exp", "iss", "aud"]},
     )
     try:
-        return UUID(claims["sub"])
-    except (KeyError, ValueError) as error:
+        return UUID(claims["sub"]), UUID(claims["sid"])
+    except (KeyError, ValueError, TypeError, AttributeError) as error:
         raise jwt.InvalidTokenError("Invalid subject claim") from error

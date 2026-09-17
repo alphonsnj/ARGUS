@@ -1,9 +1,11 @@
+from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field
 
-from app.api.deps import get_auth_service
+from app.api.deps import CurrentUser, DbSession, get_auth_service
+from app.repositories.users import UserRepository
 from app.services.auth import AuthService, InvalidCredentialsError
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -85,5 +87,13 @@ def logout(
     if raw_token is not None:
         service.revoke_refresh_token(raw_token)
     response.status_code = status.HTTP_204_NO_CONTENT
+    response.delete_cookie("argus_refresh", path="/api/v1/auth")
+    return response
+
+
+@router.post("/logout-all", status_code=status.HTTP_204_NO_CONTENT)
+def logout_all(user: CurrentUser, session: DbSession) -> Response:
+    UserRepository(session).revoke_user_sessions(user.id, datetime.now(timezone.utc))
+    response = Response(status_code=204)
     response.delete_cookie("argus_refresh", path="/api/v1/auth")
     return response

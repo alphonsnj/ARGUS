@@ -3,12 +3,22 @@ from uuid import UUID
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from app.models import Document, DocumentEntity, DocumentStatus
+from app.models import Document, DocumentEntity, DocumentStatus, User
 
 
 class DocumentRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
+
+    def reserve_capacity(
+        self, owner_id: UUID, incoming_bytes: int, max_bytes: int, max_documents: int
+    ) -> bool:
+        # Serialize uploads for an owner until create() commits. All statuses count.
+        self._session.execute(select(User.id).where(User.id == owner_id).with_for_update())
+        count, used = self._session.execute(select(
+            func.count(Document.id), func.coalesce(func.sum(Document.byte_size), 0)
+        ).where(Document.owner_id == owner_id)).one()
+        return bool(count < max_documents and used + incoming_bytes <= max_bytes)
 
     def create(
         self,

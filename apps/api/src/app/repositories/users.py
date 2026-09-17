@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.models import RefreshToken, Role, User
@@ -25,21 +25,43 @@ class UserRepository:
         self._session.commit()
         return token
 
-    def get_active_refresh_token(self, token_hash: str, now: datetime) -> RefreshToken | None:
+    def lock_user(self, user_id: UUID) -> None:
+        self._session.execute(select(User.id).where(User.id == user_id).with_for_update())
+
+    def get_active_refresh_token(
+        self, token_hash: str, now: datetime, *, lock: bool = True
+    ) -> RefreshToken | None:
+        statement = select(RefreshToken).where(
+            RefreshToken.token_hash == token_hash,
+            RefreshToken.revoked_at.is_(None),
+            RefreshToken.expires_at > now,
+        ).execution_options(populate_existing=True)
         return self._session.scalar(
-            select(RefreshToken).where(
-                RefreshToken.token_hash == token_hash,
-                RefreshToken.revoked_at.is_(None),
-                RefreshToken.expires_at > now,
-            )
+            statement.with_for_update() if lock else statement
         )
 
-    def revoke_refresh_token(self, token: RefreshToken, now: datetime) -> None:
+    def active_session(self, session_id: UUID, user_id: UUID, now: datetime) -> bool:
+        return self._session.scalar(select(RefreshToken.id).where(
+            RefreshToken.id == session_id, RefreshToken.user_id == user_id,
+            RefreshToken.revoked_at.is_(None), RefreshToken.expires_at > now,
+        )) is not None
+
+    def revoke_refresh_token(
+        self, token: RefreshToken, now: datetime, *, commit: bool = True
+    ) -> None:
         token.revoked_at = now
-        self._session.commit()
+        if commit:
+            self._session.commit()
 
     def role(self, name: str) -> Role | None:
         return self._session.scalar(select(Role).where(Role.name == name))
+
+    def revoke_user_sessions(self, user_id: UUID, now: datetime) -> None:
+        self.lock_user(user_id)
+        self._session.execute(update(RefreshToken).where(
+            RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None)
+        ).values(revoked_at=now))
+        self._session.commit()
 
     def list_users(self) -> list[User]:
         return list(self._session.scalars(select(User).order_by(User.created_at.desc())))

@@ -25,7 +25,16 @@ export type InvestigationDocument = {
   entities: DocumentEntity[];
 };
 
-async function refreshAccessToken(): Promise<string | null> {
+let refreshInFlight: Promise<string | null> | null = null;
+
+function refreshAccessToken(): Promise<string | null> {
+  if (!refreshInFlight) {
+    refreshInFlight = performRefresh().finally(() => { refreshInFlight = null; });
+  }
+  return refreshInFlight;
+}
+
+async function performRefresh(): Promise<string | null> {
   const response = await fetch(`${apiUrl}/auth/refresh`, { method: "POST", credentials: "include" });
   if (!response.ok) return null;
   const payload: { access_token: string } = await response.json();
@@ -41,7 +50,8 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
     headers: { ...init.headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
   });
   if (response.status === 401 && token) {
-    token = await refreshAccessToken();
+    const latest = sessionStorage.getItem("argus_access_token");
+    token = latest && latest !== token ? latest : await refreshAccessToken();
     if (token) {
       response = await fetch(`${apiUrl}${path}`, {
         ...init,

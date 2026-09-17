@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     clamav_host: str = "clamav"
     clamav_port: int = Field(default=3310, ge=1, le=65535)
     max_upload_bytes: int = Field(default=25 * 1024 * 1024, ge=1, le=100 * 1024 * 1024)
+    max_user_storage_bytes: int = Field(default=1024 * 1024 * 1024, ge=1)
+    max_user_documents: int = Field(default=1000, ge=1)
     jwt_secret_key: SecretStr
     jwt_issuer: str = "argus-api"
     jwt_audience: str = "argus-web"

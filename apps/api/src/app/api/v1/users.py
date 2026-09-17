@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 from app.api.deps import CurrentUser, DbSession, SuperAdministrator
@@ -41,3 +41,12 @@ def current_user(user: CurrentUser) -> UserResponse:
 @router.get("", response_model=list[UserResponse])
 def list_users(session: DbSession, _: SuperAdministrator) -> list[UserResponse]:
     return [user_response(user) for user in UserRepository(session).list_users()]
+
+
+@router.delete("/{user_id}/sessions", status_code=204)
+def revoke_sessions(user_id: UUID, session: DbSession, _: SuperAdministrator) -> Response:
+    users = UserRepository(session)
+    if users.get_by_id(user_id) is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    users.revoke_user_sessions(user_id, datetime.now(timezone.utc))
+    return Response(status_code=204)
