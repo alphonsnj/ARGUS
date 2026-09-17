@@ -13,6 +13,7 @@ const allowedTypes = [
 ];
 
 const readableSize = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(bytes < 1024 * 1024 ? 2 : 1)} MB`;
+const pageSize = 20;
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<InvestigationDocument[]>([]);
@@ -21,23 +22,40 @@ export default function DocumentsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState<string | null>(null);
   const requestId = useRef(0);
 
   const loadDocuments = useCallback(async () => {
     const id = ++requestId.current;
+    setLoading(true);
     try {
-      const response = await apiFetch(`/documents${query ? `?query=${encodeURIComponent(query)}` : ""}`);
+      const params = new URLSearchParams({ limit: String(pageSize + 1), offset: String(page * pageSize) });
+      if (query) params.set("query", query);
+      const response = await apiFetch(`/documents?${params}`);
       if (id !== requestId.current) return;
       if (!response.ok) { setMessage("Documents are currently unavailable."); return; }
       const records: InvestigationDocument[] = await response.json();
       if (id !== requestId.current) return;
-      setDocuments(records);
+      setHasNext(records.length > pageSize);
+      setDocuments(records.slice(0, pageSize));
       setMessage(records.length ? "" : query ? "No matching documents." : "No documents have been submitted in your workspace.");
     } catch {
       if (id === requestId.current) setMessage("Could not reach the document service. Try refreshing shortly.");
+    } finally {
+      if (id === requestId.current) setLoading(false);
     }
-  }, [query]);
+  }, [query, page]);
+
+  function changePage(next: number) {
+    requestId.current++;
+    setDocuments([]);
+    setHasNext(false);
+    setLoading(true);
+    setPage(next);
+  }
 
   useEffect(() => {
     void loadDocuments();
@@ -83,7 +101,9 @@ export default function DocumentsPage() {
         setMessage(payload.detail ?? "The document could not be submitted.");
       } else {
         const document: InvestigationDocument = await response.json();
-        setDocuments((current) => [document, ...current]);
+        requestId.current++;
+        setDocuments((current) => page === 0 && !query ? [document, ...current].slice(0, pageSize) : [document]);
+        setPage(0);
         setFile(null);
         setMessage("Document accepted into protected processing. Status updates after scanning and extraction.");
         form.reset();
@@ -113,11 +133,12 @@ export default function DocumentsPage() {
         event.preventDefault();
         if (search.trim().length === 1) { setMessage("Enter at least two characters to search."); return; }
         setQuery(search.trim());
+        setPage(0);
       }}>
         <label htmlFor="document-query">Search extracted text</label>
         <input id="document-query" type="search" value={search} maxLength={200} onChange={(event) => setSearch(event.target.value)} />
         <button className="button" type="submit">Search</button>
-        <button className="text-button" type="button" onClick={() => { setSearch(""); setQuery(""); }}>Clear search</button>
+        <button className="text-button" type="button" onClick={() => { setSearch(""); setQuery(""); setPage(0); }}>Clear search</button>
       </form>
       {message && <p className="empty-message" role="status">{message}</p>}
       {documents.map((document) => <article className="document-row" key={document.id}>
@@ -127,6 +148,11 @@ export default function DocumentsPage() {
           {document.status === "failed" && <button className="text-button" disabled={retrying !== null} onClick={() => retry(document.id)} aria-label={`Retry ${document.original_filename}`}>{retrying === document.id ? "Retrying…" : "Retry processing"}</button>}
         </div>
       </article>)}
+      <nav className="section-title" aria-label="Document pages">
+        <button className="text-button" disabled={loading || page === 0} onClick={() => changePage(page - 1)}>Previous page</button>
+        <span role="status">Page {page + 1}{loading ? " · Updating…" : ""}</span>
+        <button className="text-button" disabled={loading || !hasNext || (page + 1) * pageSize > 10000} onClick={() => changePage(page + 1)}>Next page</button>
+      </nav>
     </section>
   </section>;
 }

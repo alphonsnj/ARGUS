@@ -41,13 +41,18 @@ class DocumentRepository:
     def get(self, document_id: UUID) -> Document | None:
         return self._session.get(Document, document_id)
 
-    def list_for_owner(self, owner_id: UUID, query: str | None = None) -> list[Document]:
+    def list_for_owner(
+        self, owner_id: UUID, query: str | None = None, *, limit: int = 50, offset: int = 0
+    ) -> list[Document]:
         statement = select(Document).where(Document.owner_id == owner_id)
         if query:
             statement = statement.where(
                 Document.search_vector.op("@@")(func.websearch_to_tsquery("english", query))
             )
-        return list(self._session.scalars(statement.order_by(Document.created_at.desc())))
+        return list(self._session.scalars(
+            statement.order_by(Document.created_at.desc(), Document.id.desc())
+            .limit(limit).offset(offset)
+        ))
 
     def mark_processing(self, document: Document) -> None:
         document.status = DocumentStatus.PROCESSING

@@ -148,9 +148,13 @@ def list_documents(
     user: CurrentUser,
     session: DbSession,
     query: Annotated[str | None, Query(min_length=2, max_length=200)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0, le=10000)] = 0,
 ) -> list[DocumentResponse]:
     repository = DocumentRepository(session)
-    return [response_model(document) for document in repository.list_for_owner(user.id, query)]
+    return [response_model(document) for document in repository.list_for_owner(
+        user.id, query, limit=limit, offset=offset
+    )]
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)

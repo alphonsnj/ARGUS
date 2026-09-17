@@ -28,7 +28,7 @@ audited in CI. Regenerate the lock with uv pip compile pyproject.toml
 - Durable business audit events, external log retention and alerts.
 - Automated database/object-store backups and a measured isolated restore drill.
 - Crash-window orphan-object cleanup and idempotent upload/deduplication policy.
-- Pagination, quotas and representative load tests.
+- Quotas and representative load tests; cursor pagination for very large datasets.
 - Safe Redis stream retention that preserves pending work.
 - Broader browser/OCR compatibility and independent security review.
 
@@ -44,3 +44,16 @@ Web and infrastructure images also need a complete production vulnerability revi
 
 Keep the main PostgreSQL and MinIO volumes intact during all testing. Use a
 separate Compose project and synthetic data for destructive recovery drills.
+
+## Bounded document lists
+
+GET /api/v1/documents now defaults to limit=50, accepts limit=1..100 and
+offset=0..10000, and retains the existing array response. Results sort by
+created_at descending then ID descending and remain owner/search scoped.
+The UI shows 20 records per page, with a one-record lookahead for Next.
+Search changes and successful uploads return to the first page.
+Offset pages are not a snapshot: concurrent insertions can shift page boundaries.
+Use a cursor/snapshot design before workloads require deep or immutable paging.
+
+Verification: API pagination query/validation tests and scripts/qa-pagination.mjs
+(UI-only mocked API contract test on a local Next server at port 3100).
