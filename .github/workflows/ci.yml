@@ -9,6 +9,18 @@ permissions:
   contents: read
 
 jobs:
+  recovery:
+    name: Isolated backup restore
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: cp .env.example .env
+      - run: docker build -t argus-api apps/api
+      - run: node scripts/qa-backup.mjs
+
   web:
     name: Web quality
     runs-on: ubuntu-24.04

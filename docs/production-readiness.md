@@ -26,7 +26,9 @@ audited in CI. Regenerate the lock with uv pip compile pyproject.toml
 - MFA enforcement and immediate access-token/session revocation (logout currently
   revokes refresh tokens; issued access tokens remain valid until expiry).
 - Durable business audit events, external log retention and alerts.
-- Automated database/object-store backups and a measured isolated restore drill.
+- Off-site encrypted backup storage, production scheduling/alerts and retention.
+  Local backup/restore tooling and a synthetic isolated drill are implemented;
+  see [backup and restore](backup-and-restore.md).
 - Crash-window orphan-object cleanup and idempotent upload/deduplication policy.
 - Quotas and representative load tests; cursor pagination for very large datasets.
 - Safe Redis stream retention that preserves pending work.

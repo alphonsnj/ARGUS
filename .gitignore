@@ -18,3 +18,4 @@ __pycache__/
 minio-data/
 postgres-data/
 redis-data/
+backups/
