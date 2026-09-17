@@ -1,7 +1,7 @@
 from functools import lru_cache
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import AnyHttpUrl, Field, SecretStr, field_validator
+from pydantic import AnyHttpUrl, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,6 +26,23 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = Field(default=30, ge=1, le=90)
     cookie_secure: bool = False
     cors_origins: list[AnyHttpUrl] = []
+    allowed_hosts: list[str] = ["localhost", "127.0.0.1", "api"]
+    auth_rate_limit_per_minute: int = Field(default=20, ge=1, le=1000)
+
+    @model_validator(mode="after")
+    def production_safety(self) -> Self:
+        if self.app_env == "production":
+            if not self.cookie_secure:
+                raise ValueError("Production requires COOKIE_SECURE=true")
+            if not self.cors_origins or any(
+                origin.scheme != "https" for origin in self.cors_origins
+            ):
+                raise ValueError("Production requires explicit HTTPS CORS origins")
+            if not self.allowed_hosts or "*" in self.allowed_hosts:
+                raise ValueError("Production requires explicit allowed hosts")
+            if "replace-" in self.jwt_secret_key.get_secret_value():
+                raise ValueError("Production cannot use the example JWT secret")
+        return self
 
     @field_validator("jwt_secret_key")
     @classmethod

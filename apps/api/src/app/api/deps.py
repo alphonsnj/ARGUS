@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import InvalidTokenError
 from sqlalchemy.orm import Session
@@ -23,6 +23,7 @@ def get_auth_service(
 
 
 def get_current_user(
+    request: Request,
     session: DbSession,
     settings: Annotated[Settings, Depends(get_settings)],
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
@@ -42,6 +43,7 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Account is not active"
         )
+    request.state.actor_id = str(user.id)
     return user
 
 

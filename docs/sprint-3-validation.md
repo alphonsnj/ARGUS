@@ -53,5 +53,21 @@ The reported Python coverage excludes the separately running API/worker processe
 and should not be interpreted as full live-service coverage.
 
 See [repeatable verification and deployment limits](ingestion-verification.md).
-GitHub Actions was corrected but has not been run on GitHub in this checkpoint.
-No push or deployment was performed.
+The checkpoint was pushed to `codex/sprint3-validation`. GitHub Actions run
+35178500793 passed. No production deployment was performed.
+
+## Subsequent hardening
+
+- Runtime Python dependencies now use a hash-locked requirements file in Docker
+  and CI. Pillow and pypdf were upgraded after vulnerability findings.
+- Production settings reject insecure cookies, HTTP CORS origins, wildcard
+  allowed hosts, and the example signing secret.
+- Production login/refresh requests have Redis-backed per-client-address limits
+  and fail closed if Redis is unavailable. Reverse proxies must only forward
+  trusted client addresses; proxy topology still needs deployment validation.
+- API responses include request IDs, no-store and nosniff headers; production
+  responses include HSTS. This does not provision TLS by itself.
+- Structured request logs omit bodies, credentials and query strings. They are
+  not a durable, tamper-evident business audit trail.
+
+See [production readiness gaps](production-readiness.md) before deployment.
