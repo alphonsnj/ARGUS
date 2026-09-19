@@ -5,6 +5,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.models import RefreshToken, Role, User
+from app.repositories.audit import record_event
 
 
 class UserRepository:
@@ -22,6 +23,8 @@ class UserRepository:
     ) -> RefreshToken:
         token = RefreshToken(user_id=user.id, token_hash=token_hash, expires_at=expires_at)
         self._session.add(token)
+        self._session.flush()
+        record_event(self._session, "session.created", token.id, actor_id=user.id)
         self._session.commit()
         return token
 
@@ -50,6 +53,7 @@ class UserRepository:
         self, token: RefreshToken, now: datetime, *, commit: bool = True
     ) -> None:
         token.revoked_at = now
+        record_event(self._session, "session.revoked", token.id, actor_id=token.user_id)
         if commit:
             self._session.commit()
 
@@ -61,6 +65,11 @@ class UserRepository:
         self._session.execute(update(RefreshToken).where(
             RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None)
         ).values(revoked_at=now))
+        record_event(self._session, "sessions.revoked", user_id)
+        self._session.commit()
+
+    def record_authentication_failure(self) -> None:
+        record_event(self._session, "authentication.failed")
         self._session.commit()
 
     def list_users(self) -> list[User]:

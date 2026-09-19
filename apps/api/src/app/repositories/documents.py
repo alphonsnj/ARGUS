@@ -4,6 +4,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.models import Document, DocumentEntity, DocumentStatus, User
+from app.repositories.audit import record_event
 
 
 class DocumentRepository:
@@ -39,6 +40,8 @@ class DocumentRepository:
             quarantine_key=quarantine_key,
         )
         self._session.add(document)
+        self._session.flush()
+        record_event(self._session, "document.created", document.id, actor_id=owner_id)
         self._session.commit()
         self._session.refresh(document)
         return document
@@ -67,17 +70,20 @@ class DocumentRepository:
     def mark_processing(self, document: Document) -> None:
         document.status = DocumentStatus.PROCESSING
         document.failure_reason = None
+        record_event(self._session, "document.processing", document.id)
         self._session.commit()
 
     def mark_rejected(self, document: Document, reason: str) -> None:
         document.status = DocumentStatus.REJECTED
         document.failure_reason = reason[:255]
+        record_event(self._session, "document.rejected", document.id)
         self._session.commit()
 
     def mark_failed(self, document: Document, reason: str) -> None:
         self._session.rollback()
         document.status = DocumentStatus.FAILED
         document.failure_reason = reason[:255]
+        record_event(self._session, "document.failed", document.id)
         self._session.commit()
 
     def mark_ready(
@@ -105,9 +111,11 @@ class DocumentRepository:
             .where(Document.id == document.id)
             .values(search_vector=func.to_tsvector("english", text))
         )
+        record_event(self._session, "document.ready", document.id)
         self._session.commit()
 
     def requeue(self, document: Document) -> None:
         document.status = DocumentStatus.QUEUED
         document.failure_reason = None
+        record_event(self._session, "document.retried", document.id)
         self._session.commit()

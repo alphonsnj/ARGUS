@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from app.api.deps import CurrentUser, DbSession
 from app.core.config import Settings, get_settings
 from app.models import Document, DocumentStatus
+from app.repositories.audit import record_event
 from app.repositories.documents import DocumentRepository
 from app.services.queue import DocumentQueue
 from app.services.storage import ObjectStorage
@@ -158,9 +159,12 @@ def list_documents(
     offset: Annotated[int, Query(ge=0, le=10000)] = 0,
 ) -> list[DocumentResponse]:
     repository = DocumentRepository(session)
-    return [response_model(document) for document in repository.list_for_owner(
+    result = [response_model(document) for document in repository.list_for_owner(
         user.id, query, limit=limit, offset=offset
     )]
+    record_event(session, "document.searched" if query else "document.listed")
+    session.commit()
+    return result
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)
@@ -168,7 +172,10 @@ def get_document(document_id: UUID, user: CurrentUser, session: DbSession) -> Do
     document = DocumentRepository(session).get_for_owner(document_id, user.id)
     if document is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
-    return response_model(document)
+    result = response_model(document)
+    record_event(session, "document.read", document.id)
+    session.commit()
+    return result
 
 
 @router.post(

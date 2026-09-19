@@ -54,6 +54,7 @@ def test_malware_isolation_and_logout() -> None:
         assert stranger.get("/documents").json() == []
         assert stranger.get("/documents", params={"query": "quasar"}).json() == []
         assert stranger.get("/users").status_code == 403
+        assert stranger.get("/audit").status_code == 403
         assert stranger.delete(f"/users/{user_ids[0]}/sessions").status_code == 403
         assert httpx.get("http://api:8000/api/v1/documents").status_code == 401
         spoofed = owner.post("/documents", files={
@@ -82,6 +83,23 @@ def test_malware_isolation_and_logout() -> None:
             assert stored.storage_key is None
             assert stored.extracted_text is None
         assert owner.post(f"/documents/{infected_id}/retry").status_code == 409
+        from app.models import Role
+        from app.models.audit import AuditEvent
+        with SessionLocal() as session:
+            user = session.get(User, user_ids[0])
+            role = session.scalar(select(Role).where(Role.name == "Super Administrator"))
+            assert role is not None
+            user.roles.append(role)
+            session.commit()
+            events = list(session.scalars(select(AuditEvent).where(
+                AuditEvent.actor_id == user_ids[0]
+            )))
+            assert {"session.created", "document.created", "document.read"} <= {
+                event.action for event in events
+            }
+            assert any(event.request_id for event in events)
+        audited = owner.get("/audit", params={"limit": 2})
+        assert audited.status_code == 200 and len(audited.json()) == 2
         old_access = owner.headers["Authorization"]
         refreshed = owner.post("/auth/refresh")
         assert refreshed.status_code == 200

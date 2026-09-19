@@ -4,10 +4,13 @@ import hashlib
 import sys
 
 from sqlalchemy import select, text
+from sqlalchemy.exc import DBAPIError
 
 from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.models import Document, DocumentEntity, DocumentStatus, User
+from app.models.audit import AuditEvent
+from app.repositories.audit import record_event
 from app.services.storage import ObjectStorage
 
 storage = ObjectStorage(get_settings())
@@ -52,11 +55,25 @@ with SessionLocal() as session:
         session.execute(
             text("UPDATE documents SET search_vector = to_tsvector('english', extracted_text)")
         )
+        record_event(session, "document.created", actor_id=user.id)
         session.commit()
     elif sys.argv[1] == "verify":
         users = list(session.scalars(select(User)))
         documents = list(session.scalars(select(Document)))
         assert len(users) == 1 and users[0].email == "restore-drill@example.com"
+        assert session.scalar(select(AuditEvent.action)) == "document.created"
+        for statement in (
+            "UPDATE audit_events SET action = 'changed'",
+            "DELETE FROM audit_events",
+            "TRUNCATE audit_events",
+        ):
+            try:
+                with session.begin_nested():
+                    session.execute(text(statement))
+            except DBAPIError as error:
+                assert "append-only" in str(error)
+            else:
+                raise AssertionError("Restored audit mutation guard is missing")
         assert len(documents) == 2
         for document in documents:
             assert document.owner_id == users[0].id
@@ -79,7 +96,7 @@ with SessionLocal() as session:
         assert session.scalar(text("SELECT version_num FROM alembic_version"))
         print(
             "PASS restored schema, users, documents, foreign keys, entities, "
-            "search and object bytes/metadata"
+            "search, append-only audit history and object bytes/metadata"
         )
     else:
         raise RuntimeError("Unknown fixture action")

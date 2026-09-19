@@ -23,6 +23,7 @@ class AuthService:
     def authenticate(self, email: str, password: str) -> User:
         user = self._users.get_by_email(email)
         if user is None or not user.is_active or not verify_password(password, user.password_hash):
+            self._users.record_authentication_failure()
             raise InvalidCredentialsError
         return user
 

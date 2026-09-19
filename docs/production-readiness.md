@@ -24,7 +24,9 @@ audited in CI. Regenerate the lock with uv pip compile pyproject.toml
 
 - TLS ingress, production Compose/deployment configuration and external secret store.
 - MFA enforcement, enrollment and recovery policy.
-- Durable business audit events, external log retention and alerts.
+- External audit-log retention, restricted DB roles, alerts and remaining event
+  coverage. Transactional audit events and a read-only admin API are implemented;
+  see [audit logging](audit-logging.md).
 - Off-site encrypted backup storage, production scheduling/alerts and retention.
   Local backup/restore tooling and a synthetic isolated drill are implemented;
   see [backup and restore](backup-and-restore.md).

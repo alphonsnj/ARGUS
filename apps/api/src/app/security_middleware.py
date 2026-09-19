@@ -24,6 +24,7 @@ async def security_boundary(
 ) -> Response:
     settings = get_settings()
     request_id = uuid4().hex
+    request.state.request_id = request_id
     response: Response
     limited = (
         settings.app_env == "production"
