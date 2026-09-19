@@ -20,6 +20,7 @@ jobs:
       - run: cp .env.example .env
       - run: docker build -t argus-api apps/api
       - run: node scripts/qa-backup.mjs
+      - run: node scripts/qa-runtime-env.mjs
 
   web:
     name: Web quality

@@ -50,6 +50,9 @@ try {
   const restored = backup("restore", target);
   console.log(restored.stdout.trim());
   console.log(fixture(target, "verify").stdout.trim());
+  console.log(command("docker", ["run", "--rm", "--network", `${target}_default`,
+    "--env-file", ".env", "-v", `${process.cwd()}/scripts:/ops:ro`, "--entrypoint", "python",
+    "argus-api", "/ops/qa_database_roles.py"]).stdout.trim());
   const nonempty = backup("restore", target, false);
   assert.notEqual(nonempty.status, 0);
   assert.match(nonempty.stderr, /empty database/);

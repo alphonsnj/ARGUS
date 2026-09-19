@@ -1,7 +1,10 @@
 # Isolated, disposable validation stack. Use with -p argus-validation and the base compose file.
 services:
   api:
+    env_file: !override [.env]
     ports: !override ["127.0.0.1:8300:8000"]
+  document-worker:
+    env_file: !override [.env]
   minio:
     ports: !override ["127.0.0.1:9301:9001"]
   web:

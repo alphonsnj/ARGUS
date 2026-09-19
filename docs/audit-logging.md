@@ -27,8 +27,9 @@ Request IDs link HTTP events to structured server logs.
 A PostgreSQL trigger rejects UPDATE, DELETE and TRUNCATE on audit_events. This
 is an append-only application guard, **not cryptographic tamper evidence**:
 database owners/superusers can disable triggers, drop tables or restore backups.
-Production needs separate restricted runtime/migration roles and an independently
-retained log sink. There is no automatic audit deletion or retention schedule.
+The [restricted runtime login](database-roles.md) additionally denies audit
+mutation and DDL. Production still needs restricted migration credentials and an
+independently retained log sink. There is no automatic audit deletion or retention schedule.
 
 Not yet covered: every authorization denial, refresh rejection, CLI bootstrap,
 direct database changes, or proof of file viewing/download. Existing stdout

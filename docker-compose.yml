@@ -51,7 +51,7 @@ services:
 
   api:
     build: ./apps/api
-    env_file: .env
+    env_file: ${ARGUS_APP_ENV_FILE:-.env}
     ports: ["8000:8000"]
     depends_on:
       postgres: { condition: service_healthy }
@@ -62,7 +62,7 @@ services:
 
   document-worker:
     build: ./apps/api
-    env_file: .env
+    env_file: ${ARGUS_APP_ENV_FILE:-.env}
     command: ["python", "-m", "app.workers.documents"]
     depends_on:
       postgres: { condition: service_healthy }
@@ -70,6 +70,16 @@ services:
       minio: { condition: service_healthy }
       clamav: { condition: service_healthy }
     restart: unless-stopped
+
+  migrate:
+    profiles: [operations]
+    image: argus-api
+    build: ./apps/api
+    env_file: .env
+    entrypoint: [alembic]
+    command: [upgrade, head]
+    depends_on:
+      postgres: { condition: service_healthy }
 
   web:
     build:

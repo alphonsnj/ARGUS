@@ -16,8 +16,9 @@ AI-powered investigation intelligence platform. ARGUS assists authorized investi
 
 1. Copy `.env.example` to `.env` and replace every example secret with a unique local value.
 2. Run `docker compose up --build`.
-3. Apply database migrations: `docker compose exec api alembic upgrade head`.
-4. Provision the first administrator: `docker compose exec api python -m app.cli.bootstrap_admin --email admin@example.com`. You will be prompted for a password; this command never accepts it as an argument.
+3. Apply database migrations: `docker compose run --rm migrate`.
+4. Provision the first administrator: `docker compose run --rm --entrypoint python migrate -m app.cli.bootstrap_admin --email admin@example.com`. You will be prompted for a password; this command never accepts it as an argument.
+5. Enable the [restricted runtime database login](docs/database-roles.md) before further hardening or deployment.
 
 The API health endpoint is `http://localhost:8000/api/v1/health`; OpenAPI documentation is at `http://localhost:8000/docs`.
 

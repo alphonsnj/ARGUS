@@ -6,7 +6,7 @@ scanned-PDF OCR, and full-text search. It creates disposable users and documents
 and objects afterward. It does not use or reset an existing administrator.
 
 Start the stack with `docker compose up -d --build` and apply migrations with
-`docker compose exec api alembic upgrade head` before running it.
+`docker compose run --rm migrate` before running it.
 
 From the repository root:
 
