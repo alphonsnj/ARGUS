@@ -11,11 +11,12 @@ Start the stack with `docker compose up -d --build` and apply migrations with
 From the repository root:
 
 ```sh
+docker build --target development -t argus-api-test apps/api
 docker run --rm --user 0 --network argus_default --env-file .env \
   -e ARGUS_LIVE_TEST=1 \
   -v "$PWD/apps/api/pyproject.toml:/app/pyproject.toml:ro" \
   -v "$PWD/apps/api/tests:/app/tests:ro" \
-  --entrypoint sh argus-api \
+  --entrypoint sh argus-api-test \
   -c 'pip install "pytest>=8.3,<9" "pytest-cov>=6,<7" && python -m pytest tests -q'
 ```
 

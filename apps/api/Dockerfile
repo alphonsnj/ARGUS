@@ -1,4 +1,4 @@
-FROM python:3.12-slim AS runtime
+FROM python:3.12-slim-trixie AS development
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 WORKDIR /app
@@ -20,3 +20,9 @@ RUN pip install --no-deps . && chown -R argus:argus /app
 USER argus
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# Package installation tools are needed for builds/tests, not serving requests.
+FROM development AS runtime
+USER root
+RUN python -m pip uninstall -y setuptools pip
+USER argus

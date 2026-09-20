@@ -39,13 +39,12 @@ audited in CI. Regenerate the lock with uv pip compile pyproject.toml
 
 ## Container vulnerability gate
 
-A local Trivy HIGH/CRITICAL scan on 2026-09-17 still reported 84 Debian package
-findings with no fixed version supplied by the scanner, plus two pip-bundled
-Python component findings (msgpack and setuptools). These are scanner entries,
-not 86 unique exploitable vulnerabilities. Upgrading installed setuptools alone
-does not resolve a vendored copy. Findings require triage/remediation; none are
-silently waived. A clean application requirements audit is not a clean image audit.
-Web and infrastructure images also need a complete production vulnerability review.
+The 2026-09-20 runtime hardening removed both bundled Python findings and reduced
+web HIGH/CRITICAL findings from 13 to zero. The API still has 84 Debian entries
+without scanner-listed fixes. PostgreSQL, Redis and MinIO have remaining findings;
+the production vulnerability gate stays blocked. See the exact inventory,
+limitations and upgrade plan in [container security](container-security.md).
+A clean application requirements audit is not a clean image audit.
 
 Keep the main PostgreSQL and MinIO volumes intact during all testing. Use a
 separate Compose project and synthetic data for destructive recovery drills.

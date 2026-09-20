@@ -19,6 +19,12 @@ jobs:
         with: { node-version: 22 }
       - run: cp .env.example .env
       - run: docker build -t argus-api apps/api
+      - name: Verify API runtime excludes packaging tools
+        run: >-
+          docker run --rm --env-file .env --entrypoint python argus-api
+          -c 'import importlib.util; import app.main, app.workers.documents;
+          assert importlib.util.find_spec("pip") is None;
+          assert importlib.util.find_spec("setuptools") is None'
       - run: node scripts/qa-backup.mjs
       - run: node scripts/qa-runtime-env.mjs
 
@@ -34,6 +40,13 @@ jobs:
       - run: npm run build --workspace=@argus/web
       - run: npm run typecheck
       - run: node scripts/qa-auth-client.mjs
+      - run: docker build --build-arg NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1 -f apps/web/Dockerfile -t argus-web .
+      - name: Verify web runtime excludes package managers
+        run: >-
+          docker run --rm --entrypoint sh argus-web
+          -c 'test ! -e /usr/local/lib/node_modules/npm &&
+          test ! -e /usr/local/lib/node_modules/corepack &&
+          test ! -e /opt/yarn-v1.22.22 && node --version'
 
   api:
     name: API quality
