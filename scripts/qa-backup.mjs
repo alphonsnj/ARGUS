@@ -10,16 +10,23 @@ const target = `argus-restore-${suffix}`;
 const root = await mkdtemp(path.join(os.tmpdir(), "argus-backup-drill-"));
 const archive = path.join(root, "archive");
 const config = "docker-compose.recovery.yml";
-function command(executable, args, ok = true) {
-  const result = spawnSync(executable, args, { encoding: "utf8" });
+const upgrade = process.argv.includes("--postgres-upgrade");
+if (process.argv.slice(2).some(arg => arg !== "--postgres-upgrade")) throw new Error("Unknown option");
+const currentImage = "postgres:16.15-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea";
+let sourceImage = upgrade ? "postgres:16.4-alpine" : currentImage;
+const environment = project => ({ ...process.env,
+  ARGUS_RECOVERY_POSTGRES_IMAGE: project === source ? sourceImage : currentImage,
+});
+function command(executable, args, ok = true, env = process.env) {
+  const result = spawnSync(executable, args, { encoding: "utf8", env });
   if (ok && result.status !== 0) throw new Error(result.stderr || result.error?.message);
   return result;
 }
-const compose = (project, ...args) => command("docker", ["compose", "-p", project, "-f", config, ...args]);
+const compose = (project, ...args) => command("docker", ["compose", "-p", project, "-f", config, ...args], true, environment(project));
 const fixture = (project, action) => command("docker", ["run", "--rm", "--network", `${project}_default`,
   "--env-file", ".env", "-v", `${process.cwd()}/scripts:/ops:ro`, "--entrypoint", "python",
   "argus-api", "/ops/qa_recovery_fixture.py", action]);
-const backup = (action, project, ok = true) => command("node", ["scripts/backup.mjs", action, project, archive, config], ok);
+const backup = (action, project, ok = true) => command("node", ["scripts/backup.mjs", action, project, archive, config], ok, environment(project));
 try {
   for (const project of [source, target]) compose(project, "up", "-d", "--wait");
   command("docker", ["run", "--rm", "--network", `${source}_default`, "--env-file", ".env",
@@ -27,6 +34,15 @@ try {
   fixture(source, "seed");
   const saved = backup("backup", source);
   console.log(saved.stdout.trim());
+  if (upgrade) {
+    compose(source, "stop", "postgres");
+    sourceImage = currentImage;
+    compose(source, "up", "-d", "--wait", "postgres");
+    const version = compose(source, "exec", "-T", "postgres", "postgres", "--version").stdout;
+    assert.match(version, /16\.15/);
+    console.log(fixture(source, "verify").stdout.trim());
+    console.log("PASS 16.4 to 16.15 restart using the same synthetic PostgreSQL volume");
+  }
   const lock = path.resolve("backups", ".locks", source);
   await mkdir(lock);
   try {

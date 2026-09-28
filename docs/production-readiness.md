@@ -46,6 +46,11 @@ the production vulnerability gate stays blocked. See the exact inventory,
 limitations and upgrade plan in [container security](container-security.md).
 A clean application requirements audit is not a clean image audit.
 
+On 2026-09-28 PostgreSQL was upgraded locally to a pinned 16.15 image after
+isolated restart/restore tests and a fresh main backup. Its scan count dropped
+from 85 to 22 (remaining findings in bundled gosu). See the
+[upgrade record](postgres-upgrade.md). The security gate remains blocked.
+
 Keep the main PostgreSQL and MinIO volumes intact during all testing. Use a
 separate Compose project and synthetic data for destructive recovery drills.
 

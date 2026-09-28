@@ -26,6 +26,7 @@ jobs:
           assert importlib.util.find_spec("pip") is None;
           assert importlib.util.find_spec("setuptools") is None'
       - run: node scripts/qa-backup.mjs
+      - run: node scripts/qa-backup.mjs --postgres-upgrade
       - run: node scripts/qa-runtime-env.mjs
 
   web:

@@ -6,8 +6,12 @@ import path from "node:path";
 const directory = path.resolve("backups", `security-${new Date().toISOString().replaceAll(":", "-")}`);
 await mkdir(directory, { recursive: true, mode: 0o700 });
 const images = process.argv.slice(2);
-if (!images.length) images.push("argus-api", "argus-web", "postgres:16.4-alpine", "redis:7.4-alpine",
-  "quay.io/minio/minio:RELEASE.2024-10-13T13-34-11Z", "clamav/clamav:1.4_base");
+if (!images.length) {
+  const configured = spawnSync("docker", ["compose", "config", "--images"], { encoding: "utf8" });
+  if (configured.status !== 0) throw new Error("Could not resolve configured image inventory");
+  images.push(...new Set(configured.stdout.trim().split(/\s+/).filter(Boolean)));
+  if (!images.length) throw new Error("No configured images to scan");
+}
 const results = [];
 for (const [index, image] of images.entries()) {
   const inspect = spawnSync("docker", ["image", "inspect", image, "--format", "{{.Id}}"], { encoding: "utf8" });

@@ -1,5 +1,8 @@
 # Container security checkpoint: 2026-09-20
 
+Update 2026-09-28: the PostgreSQL row below is historical. A tested local upgrade
+to 16.15 reduced its count from 85 to 22; see [upgrade evidence](postgres-upgrade.md).
+
 The production vulnerability gate remains **blocked**. Passing unit tests or
 dependency audits does not imply clean container images.
 
