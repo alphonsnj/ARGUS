@@ -42,6 +42,7 @@ corruption, not deliberate tampering; restore only trusted archives.
 Start a new project with an unused name beginning `argus-restore-`:
 
 ```sh
+docker compose -f docker-compose.recovery.yml build minio
 docker compose -p argus-restore-review -f docker-compose.recovery.yml up -d --wait
 node scripts/backup.mjs restore argus-restore-review backups/checkpoint-001 docker-compose.recovery.yml
 ```
@@ -60,8 +61,15 @@ and DNS changes require a separate approved recovery plan.
 ## Repeatable drill
 
 ```sh
+docker compose -f docker-compose.recovery.yml build minio
 node scripts/qa-backup.mjs
 ```
+
+The recovery-only MinIO image is built from the exact official 2024-10-13 source
+commit, with pinned Go/runtime base images. This avoids reliance on the retired
+public binary image. See [recovery storage](recovery-storage.md) for provenance
+and limitations. The normal application's MinIO image and evidence volume are
+not changed by this fixture. Do not use it as a production storage replacement.
 
 The drill creates unique source/restore projects, applies real Alembic migrations,
 seeds synthetic users/documents/entities and two objects, backs up, restores, and

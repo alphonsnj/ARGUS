@@ -34,7 +34,6 @@ audited in CI. Regenerate the lock with uv pip compile pyproject.toml
   see [backup and restore](backup-and-restore.md).
 - Crash-window orphan-object cleanup and idempotent upload/deduplication policy.
 - Representative load tests; cursor pagination for very large datasets.
-- Safe Redis stream retention that preserves pending work.
 - Broader browser/OCR compatibility and independent security review.
 
 ## Container vulnerability gate
@@ -97,3 +96,23 @@ including old-access rejection after rotation/logout, logout-all across sessions
 ordinary-user rejection of admin revocation, and concurrent quota enforcement.
 Frontend build/lint/type checking and browser workflow passed. The client test
 scripts/qa-auth-client.mjs confirms 20 concurrent 401s share one refresh operation.
+
+## Queue notification retention
+
+The worker now trims old completed stream notifications once per minute, in
+bounded batches. `QUEUE_RETENTION_SECONDS` defaults to seven days; zero disables
+cleanup. An atomic Redis script preserves the earliest pending and last-delivered
+boundary across **every** consumer group, as well as recent history. A stalled
+group can therefore prevent cleanup indefinitely; this is intentionally not a
+hard memory cap. Monitor backlog and stalled consumers before production.
+
+Cleanup does not delete documents, evidence objects or audit records. PostgreSQL
+remains the durable source for worker reconciliation. Stream IDs are generated
+by Redis; retention uses Redis server time. Do not reset consumer-group offsets
+to replay history that has already expired. Redis 7.4 is supported without the
+newer ACKED trim option. Tests use unique synthetic streams and verify pending
+job reclamation, slow/unstarted groups, missing groups and recent history.
+
+The isolated recovery image is built from pinned archived MinIO source because
+the old registry binary is unavailable; see [recovery storage](recovery-storage.md).
+This restores test reproducibility, not production storage support.

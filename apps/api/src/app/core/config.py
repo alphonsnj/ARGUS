@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
     database_url: str
     redis_url: str
+    queue_retention_seconds: int = Field(default=7 * 86400, ge=0, le=365 * 86400)
     s3_endpoint_url: str
     s3_access_key: SecretStr
     s3_secret_key: SecretStr

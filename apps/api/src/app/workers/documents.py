@@ -16,6 +16,7 @@ from app.services.documents import DocumentProcessor
 from app.services.extraction import DocumentExtractor
 from app.services.malware import ClamAvScanner
 from app.services.queue import DocumentQueue
+from app.services.queue_retention import trim_completed
 from app.services.storage import ObjectStorage
 
 logging.basicConfig(level=logging.INFO)
@@ -63,6 +64,7 @@ def main() -> None:
     )
     consumer = f"document-worker-{uuid4().hex}"
     cursor = "0-0"
+    next_trim = 0.0
     while True:
         try:
             reconcile(settings)
@@ -71,6 +73,13 @@ def main() -> None:
             except ResponseError as error:
                 if "BUSYGROUP" not in str(error):
                     raise
+            if time.monotonic() >= next_trim:
+                removed = trim_completed(
+                    redis, DocumentQueue.stream, settings.queue_retention_seconds,
+                )
+                if removed:
+                    logger.info("Removed %s completed queue notifications", removed)
+                next_trim = time.monotonic() + 60
             claimed = cast(list[object], redis.xautoclaim(
                 DocumentQueue.stream, GROUP, consumer, CLAIM_IDLE_MS, start_id=cursor, count=1
             ))

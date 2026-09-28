@@ -12,13 +12,15 @@ jobs:
   recovery:
     name: Isolated backup restore
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: cp .env.example .env
       - run: docker build -t argus-api apps/api
+      - name: Build pinned official MinIO source for isolated recovery only
+        run: docker compose -f docker-compose.recovery.yml build minio
       - name: Verify API runtime excludes packaging tools
         run: >-
           docker run --rm --env-file .env --entrypoint python argus-api
@@ -52,6 +54,13 @@ jobs:
   api:
     name: API quality
     runs-on: ubuntu-24.04
+    services:
+      redis:
+        image: redis:7.4-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 2s
+          --health-timeout 3s --health-retries 30
     defaults: { run: { working-directory: apps/api } }
     steps:
       - uses: actions/checkout@v4
@@ -67,3 +76,6 @@ jobs:
       - run: ruff check src tests
       - run: mypy src
       - run: pytest
+        env:
+          ARGUS_REDIS_TEST: '1'
+          REDIS_URL: redis://localhost:6379/0
