@@ -84,9 +84,14 @@ can DELETE /api/v1/users/{user_id}/sessions to revoke another user's sessions.
 The Users screen now provides confirmed session revocation for administrators and
 sign-out-everywhere for the current user. The Audit history screen displays the
 latest 100 events read-only and handles restricted access and service errors.
-On 2026-10-03 these frontend changes passed lint, TypeScript and a production
-build. End-to-end verification of these new controls is still outstanding; the
-local Docker engine was stopped at the checkpoint. This is not a production sign-off.
+On 2026-10-03 these frontend changes passed lint, TypeScript, production build,
+mocked browser contract checks and a live two-account browser workflow. The live
+test found and fixed missing DELETE permission in the browser CORS policy; role
+checks still run on the API. Old tokens were rejected after revocation, an audit
+record was visible, and logout-all ended the administrator session. Repeat with
+`node scripts/qa-admin.mjs` (build web first) and
+`node scripts/qa-admin-live.mjs` (local Compose stack running). Both use synthetic
+accounts/data. This is not a production sign-off.
 Session revocation does not prevent a new valid login; disable an account when
 access must remain blocked. Old access tokens without session IDs are rejected;
 existing valid refresh cookies can renew them. Otherwise sign in again.

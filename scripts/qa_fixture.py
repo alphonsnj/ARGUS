@@ -14,7 +14,7 @@ from sqlalchemy import select
 from app.core.config import get_settings
 from app.core.security import hash_password
 from app.db.session import SessionLocal
-from app.models import Document, User
+from app.models import Document, Role, User
 from app.repositories.documents import DocumentRepository
 from app.services.storage import ObjectStorage
 
@@ -23,6 +23,13 @@ with SessionLocal() as session:
     if sys.argv[1] == "seed":
         password = secrets.token_urlsafe(24)
         user = User(email=f"browser-qa-{uuid4().hex}@example.com", password_hash=hash_password(password))
+        if sys.argv[2:] == ["--admin"]:
+            role = session.scalar(select(Role).where(Role.name == "Super Administrator"))
+            if role is None:
+                raise RuntimeError("Migrate the database before running administrator QA")
+            user.roles.append(role)
+        elif sys.argv[2:]:
+            raise ValueError("Unknown seed option")
         session.add(user)
         session.commit()
         source = io.BytesIO()

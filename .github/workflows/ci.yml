@@ -43,6 +43,8 @@ jobs:
       - run: npm run build --workspace=@argus/web
       - run: npm run typecheck
       - run: node scripts/qa-auth-client.mjs
+      - run: npx playwright install --with-deps chromium
+      - run: node scripts/qa-admin.mjs
       - run: docker build --build-arg NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1 -f apps/web/Dockerfile -t argus-web .
       - name: Verify web runtime excludes package managers
         run: >-

@@ -1,5 +1,19 @@
 # Container security checkpoint: 2026-09-20
 
+Update 2026-10-03: PyJWT is locked to 2.15.0 with verified release hashes,
+addressing the CI finding PYSEC-2026-4141. The Python requirements audit and
+production npm audit report no known vulnerabilities. Compatible development
+dependency updates fixed brace-expansion; the remaining four npm HIGH entries
+are the braces/micromatch/fast-glob/Next ESLint plugin dependency chain. The
+suggested forced downgrade of the Next plugin was not applied. Production image
+findings are separate from these dependency audits; release remains blocked.
+Fresh local scans on 2026-10-03: web has zero HIGH/CRITICAL entries; API has
+88 with no scanner-listed fixes. The API image digest is
+`sha256:e03f8524292da336bd4f2ba8312e80caffc380ab10da70b3f98271a0098e22aa`.
+Reports are retained under ignored `backups/security-2026-10-03T07-36-51.414Z`
+(API) and `backups/security-2026-10-03T07-33-21.007Z` (web). The first API scan
+was interrupted by its rebuild and was rerun; it was not counted as clean.
+
 Update 2026-09-28: the PostgreSQL row below is historical. A tested local upgrade
 to 16.15 reduced its count from 85 to 22; see [upgrade evidence](postgres-upgrade.md).
 
