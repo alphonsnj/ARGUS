@@ -45,6 +45,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
       <p className="nav-label">Workspace</p>
       <nav aria-label="Primary navigation">
         {navigation.map((item) => <a key={item.href} href={item.href} className={pathname === item.href ? "nav-item active" : "nav-item"}><span aria-hidden="true">{item.glyph}</span>{item.label}</a>)}
+        {user.roles.includes("Super Administrator") && <a href="/dashboard/audit" className={pathname === "/dashboard/audit" ? "nav-item active" : "nav-item"}><span aria-hidden="true">≡</span>Audit history</a>}
       </nav>
       <div className="nav-footer">
         <div className="identity"><span className="identity-mark">{user.email.slice(0, 1).toUpperCase()}</span><span><strong>{user.email}</strong><small>{user.roles[0] ?? "Authorized user"}</small></span></div>

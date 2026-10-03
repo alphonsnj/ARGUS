@@ -1,4 +1,17 @@
 :root { --ink: #e8edf4; --muted: #94a1b1; --canvas: #0b0f14; --panel: #111820; --line: #263240; --signal: #79e1bd; --danger: #ff8b8b; --font-sans: Arial, sans-serif; --font-display: Arial, sans-serif; }
+.control-button { min-height: 44px; padding: .65rem 1rem; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--ink); cursor: pointer; font-weight: 650; }
+.control-button:hover:not(:disabled) { border-color: var(--signal); color: var(--signal); }
+.control-button:disabled { opacity: .65; cursor: wait; }
+.control-button:focus-visible, .user-table:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; }
+.security-strip { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.5rem; margin-top: 2rem; background: var(--panel); border: 1px solid var(--line); border-left: 2px solid var(--signal); }
+.security-strip h2 { margin: 0; font-size: 1.1rem; }.security-strip p { color: var(--muted); line-height: 1.5; }
+.session-action { min-width: 150px; max-width: 340px; }.session-action p:empty { display: none; }.session-action p { margin-top: .7rem; line-height: 1.5; }
+.admin-status { margin-top: 1.25rem; color: var(--muted); }.admin-status.form-error { color: var(--danger); }
+.admin-table { width: 100%; min-width: 850px; border-collapse: collapse; text-align: left; font-size: .85rem; }
+.admin-table th { padding: 1rem 1.25rem; color: var(--muted); background: #16202a; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; }
+.admin-table td { padding: 1rem 1.25rem; border-top: 1px solid var(--line); line-height: 1.5; color: var(--muted); vertical-align: top; }
+.admin-table strong { color: var(--ink); }.admin-table small { display: block; color: var(--signal); }.admin-table td.state-active { color: var(--signal); }.admin-table td.state-inactive { color: var(--danger); }
+.audit-table code { overflow-wrap: anywhere; font-size: .75rem; }.audit-table time { white-space: nowrap; font-variant-numeric: tabular-nums; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--canvas); color: var(--ink); font-family: var(--font-sans); }
 button, input { font: inherit; }
