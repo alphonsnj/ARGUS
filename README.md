@@ -30,5 +30,8 @@ For local web-only development, install dependencies with `npm install` and run 
 
 See [architecture documentation](docs/architecture.md) for package ownership and foundation boundaries.
 
+See the [delivery roadmap](docs/delivery-roadmap.md) for the staged path from
+the validated local foundation to a production approval.
+
 See [ingestion verification](docs/ingestion-verification.md) for repeatable security,
 OCR, outage, and browser checks and the remaining release limitations.
